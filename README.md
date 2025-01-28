@@ -14,17 +14,6 @@ This project aims to develop a sentiment analysis tool that classifies customer 
 - **Source:** [Kaggle](https://www.kaggle.com/datasets/cynthiarempel/amazon-us-customer-reviews-dataset?select=amazon_reviews_us_Apparel_v1_00.tsv)
 - **Description:** A large dataset of customer reviews, including star ratings, review text, and metadata.
 
-# Repository Structure
-sentiment-analysis-tool/
-│
-├── data/                   # Contains the dataset files
-├── notebooks/              # Jupyter notebooks for exploration and analysis
-├── src/                    # Source code for preprocessing, training, and deployment
-├── models/                 # Trained models
-├── requirements.txt        # Python dependencies
-└── README.md               # Project information
-
-
 ## Installation
 
 1. Clone the repository:
