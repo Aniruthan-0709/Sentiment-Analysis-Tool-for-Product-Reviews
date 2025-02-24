@@ -24,16 +24,17 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Configure Docker for Google Cloud
-        run: gcloud auth configure-docker --quiet
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker us-docker.pkg.dev --quiet
 
       - name: Build Docker Image
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/load_data:latest -f docker/load_data .
+          docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
 
       - name: Push Docker Image
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/load_data:latest
+          docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
       - name: Create Vertex AI Notebook Instance
         run: |
@@ -41,7 +42,7 @@ jobs:
             --location=us-central1-a \
             --vm-image-project=deeplearning-platform-release \
             --vm-image-family=common-cu110-notebooks \
-            --container-image-uri=gcr.io/${{ secrets.GCP_PROJECT_ID }}/load_data:latest \
+            --container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
             --container-env=KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }},KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
             --machine-type=n1-standard-2 \
             --boot-disk-size=100GB
