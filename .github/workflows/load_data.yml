@@ -14,12 +14,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Authenticate to Google Cloud using your service account key
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Set up the Cloud SDK (now that authentication is done)
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
 
       - name: Build Docker Image
         run: |
