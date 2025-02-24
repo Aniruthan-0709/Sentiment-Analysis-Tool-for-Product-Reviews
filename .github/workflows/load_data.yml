@@ -35,6 +35,9 @@ jobs:
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
+      - name: Install Beta Components
+        run: gcloud components install beta --quiet
+
       - name: Create Vertex AI Notebook Instance
         run: |
           gcloud beta notebooks instances create-container my-notebook-instance \
