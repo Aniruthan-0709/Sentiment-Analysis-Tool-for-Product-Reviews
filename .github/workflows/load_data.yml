@@ -45,4 +45,4 @@ jobs:
             --container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
             --container-env=KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }},KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
             --machine-type=n1-standard-2 \
-            --boot-disk-size=100GB
+            --boot-disk-size=100
