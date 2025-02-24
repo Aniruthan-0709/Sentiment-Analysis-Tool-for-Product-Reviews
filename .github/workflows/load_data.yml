@@ -14,35 +14,38 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Authenticate to Google Cloud using your service account key
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+      # Set up the Cloud SDK
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      # Configure Docker to use Artifact Registry authentication
       - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker us-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
+      # Build the Docker image using the custom Dockerfile
       - name: Build Docker Image
         run: |
           docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
 
+      # Push the Docker image to Artifact Registry
       - name: Push Docker Image
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
+      # Create the Vertex AI Notebook instance using the beta command for containers
       - name: Create Vertex AI Notebook Instance
         run: |
-          gcloud notebooks instances create my-notebook-instance \
+          gcloud beta notebooks instances create-container my-notebook-instance \
             --location=us-central1-a \
-            --vm-image-project=deeplearning-platform-release \
-            --vm-image-family=common-cu110-notebooks \
-            --container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
+            --container-image=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
             --container-env=KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }},KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
             --machine-type=n1-standard-2 \
             --boot-disk-size=100
