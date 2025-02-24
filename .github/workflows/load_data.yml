@@ -43,9 +43,10 @@ jobs:
       # Create the Vertex AI Notebook instance using the beta command for containers
       - name: Create Vertex AI Notebook Instance
         run: |
-          gcloud beta notebooks instances create-container my-notebook-instance \
-            --location=us-central1-a \
-            --container-image=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
-            --container-env=KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }},KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
-            --machine-type=n1-standard-2 \
-            --boot-disk-size=100
+         gcloud beta notebooks instances create-container my-notebook-instance \
+        --location=us-central1-a \
+        --container-image=us-docker.pkg.dev/<YOUR_PROJECT_ID>/docker-repo/load_data:latest \
+        --container-env=KAGGLE_USERNAME=your_kaggle_username,KAGGLE_KEY=your_kaggle_key \
+        --machine-type=n1-standard-2 \
+        --boot-disk-size=100
+
