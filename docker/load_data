@@ -10,41 +10,47 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Checkout the repository code
+      # 1️⃣ Checkout the repository code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2. Authenticate to Google Cloud
+      # 2️⃣ Authenticate to Google Cloud
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # 3. Set up Cloud SDK
+      # 3️⃣ Set up Cloud SDK
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 4. Configure Docker for Artifact Registry
+      # 4️⃣ Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
-      # 5. Build Docker Image
+      # 5️⃣ Build the Docker image
       - name: Build Docker Image
         run: |
           docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
 
-      # 6. Push Docker Image to Artifact Registry
+      # 6️⃣ Push Docker Image to Artifact Registry
       - name: Push Docker Image
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7. Submit Vertex AI Custom Job to run the script
+      # 7️⃣ Submit Vertex AI Custom Job to run the script
       - name: Submit Vertex AI Custom Job
         run: |
           gcloud ai custom-jobs create \
             --region=us-central1 \
             --display-name=load-data-job \
             --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+
+      # 8️⃣ Cleanup (Optional): Remove older images if needed
+      - name: Cleanup Old Docker Images (Optional)
+        run: |
+          gcloud artifacts docker images delete us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
