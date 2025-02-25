@@ -47,6 +47,8 @@ jobs:
 
       # 7️⃣ Submit Vertex AI Custom Job to run the script
       - name: Submit Vertex AI Custom Job
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
         run: |
           gcloud ai custom-jobs create \
             --region=us-central1 \
