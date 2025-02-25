@@ -1,25 +1,50 @@
-# Use an official Python runtime as the base image
-FROM python:3.9-slim
+name: Deploy to Cloud Run
 
-# Install OS-level dependencies (if needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
- && rm -rf /var/lib/apt/lists/*
+on:
+  push:
+    branches: [ main ]
 
-# Install Python dependencies (kagglehub and google-cloud-storage)
-RUN pip install kagglehub[pandas-datasets] google-cloud-storage
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-# Set environment variable for Kaggle credentials location
-ENV KAGGLE_CONFIG_DIR=/root/.kaggle
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-# Create directory for Kaggle credentials
-RUN mkdir -p /root/.kaggle
+      # Step 2: Authenticate with Google Cloud
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-# Copy your application code from the code/ folder into the container
-COPY code/load_data.py /app/load_data.py
+      # Step 3: Set up gcloud CLI
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_email: github-actions-deployer@civic-sunrise-448921-c2.iam.gserviceaccount.com
 
-# Set the working directory to /app
-WORKDIR /app
+      # Step 4: Build Docker Image
+      - name: Build Docker Image
+        run: |
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-app
 
-# Run your load_data.py script when the container starts
-CMD ["python", "load_data.py"]
+      # Step 5: Deploy to Cloud Run Job
+      - name: Deploy Cloud Run Job
+        run: |
+          gcloud beta run jobs create load-data-job \
+            --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-app \
+            --region=us-central1 \
+            --service-account=compute-engine-default@civic-sunrise-448921-c2.iam.gserviceaccount.com \
+            --max-retries=3 \
+            --memory=512Mi \
+            --timeout=600s
+
+      # Step 6: Execute Cloud Run Job
+      - name: Execute Cloud Run Job
+        run: |
+          gcloud beta run jobs execute load-data-job \
+            --region=us-central1 \
+            --wait
