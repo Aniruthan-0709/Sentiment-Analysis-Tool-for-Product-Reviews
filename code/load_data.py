@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 import sys
+import pandas as pd
 from google.cloud import storage
 
 def setup_kaggle_credentials():
@@ -43,7 +44,7 @@ def download_and_extract_dataset():
         "-p",
         dataset_dir
     ]
-    print("Downloading dataset. This may take a while due to its large size...")
+    print("Downloading dataset. This may take a while...")
     try:
         subprocess.check_call(command)
     except subprocess.CalledProcessError as e:
@@ -52,23 +53,37 @@ def download_and_extract_dataset():
     print("Dataset downloaded and extracted into folder:", dataset_dir)
     return dataset_dir
 
+def convert_csv_to_parquet(dataset_dir):
+    """
+    Converts CSV files in the dataset directory to Parquet format.
+    """
+    for root, _, files in os.walk(dataset_dir):
+        for file in files:
+            if file.endswith('.csv'):
+                csv_path = os.path.join(root, file)
+                parquet_path = csv_path.replace('.csv', '.parquet')
+                try:
+                    df = pd.read_csv(csv_path)
+                    df.to_parquet(parquet_path, index=False)
+                    print(f"Converted {file} to Parquet format.")
+                except Exception as e:
+                    print(f"Error converting {file}: {e}")
+
 def upload_folder_to_gcs(source_folder, bucket_name, destination_prefix=""):
     """
-    Recursively uploads files from source_folder to the specified GCS bucket.
-    Maintains folder structure under destination_prefix.
+    Uses gsutil for parallelized upload of Parquet files to GCS.
     """
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    
-    for root, _, files in os.walk(source_folder):
-        for file in files:
-            local_path = os.path.join(root, file)
-            relative_path = os.path.relpath(local_path, source_folder)
-            blob_path = os.path.join(destination_prefix, relative_path)
-            print(f"Uploading {local_path} to gs://{bucket_name}/{blob_path} ...")
-            blob = bucket.blob(blob_path)
-            blob.upload_from_filename(local_path)
-    print("All files have been uploaded successfully.")
+    command = [
+        "gsutil", "-m", "cp", "-r", source_folder,
+        f"gs://{bucket_name}/{destination_prefix}"
+    ]
+    print(f"Uploading {source_folder} to gs://{bucket_name}/{destination_prefix} ...")
+    try:
+        subprocess.check_call(command)
+        print("Upload completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print("Error during GCS upload:", e)
+        sys.exit(1)
 
 def main():
     # Step 1: Set up Kaggle credentials
@@ -77,8 +92,11 @@ def main():
     # Step 2: Download and extract the 50GB dataset from Kaggle
     dataset_dir = download_and_extract_dataset()
     
-    # Step 3: Upload dataset files to GCS
-    bucket_name = os.environ.get("GCS_BUCKET", "mlops_data_staging")
+    # Step 3: Convert CSVs to Parquet for optimized storage
+    convert_csv_to_parquet(dataset_dir)
+    
+    # Step 4: Upload Parquet files to GCS
+    bucket_name = os.environ.get("GCS_BUCKET", "mlops_staging")
     upload_folder_to_gcs(dataset_dir, bucket_name, destination_prefix="amazon_reviews")
 
 if __name__ == "__main__":
