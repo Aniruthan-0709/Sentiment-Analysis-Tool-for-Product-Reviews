@@ -45,15 +45,15 @@ jobs:
       - name: Install Beta Components
         run: gcloud components install beta --quiet
 
-      # 8. Create a Cloud Run Job using the pushed image
+      # 8. Create a Cloud Run Job using the pushed image in a valid region (e.g., us-central1)
       - name: Create Cloud Run Job
         run: |
           gcloud beta run jobs create load-data-job \
             --image=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
-            --region=us \
+            --region=us-central1 \
             --quiet
 
-      # 9. Execute the Cloud Run Job to run your data-loading container
+      # 9. Execute the Cloud Run Job to run your data-loading container in the same region
       - name: Execute Cloud Run Job
         run: |
-          gcloud beta run jobs execute load-data-job --region=us --quiet
+          gcloud beta run jobs execute load-data-job --region=us-central1 --quiet
