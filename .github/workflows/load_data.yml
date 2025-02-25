@@ -11,33 +11,41 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1. Check out your repository code
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # 2. Authenticate to Google Cloud using your service account key
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1.6.0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+      # 3. Set up the Cloud SDK using your project ID
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1.6.0
+        uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      # 4. Configure Docker to authenticate with Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
+      # 5. Build your Docker image using your custom Dockerfile
       - name: Build Docker Image
         run: |
           docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
 
+      # 6. Push the Docker image to Artifact Registry
       - name: Push Docker Image
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
+      # 7. Install beta components non-interactively
       - name: Install Beta Components
         run: gcloud components install beta --quiet
 
+      # 8. Create a Cloud Run Job using the pushed image
       - name: Create Cloud Run Job
         run: |
           gcloud beta run jobs create load-data-job \
@@ -45,6 +53,7 @@ jobs:
             --region=us \
             --quiet
 
+      # 9. Execute the Cloud Run Job to run your data-loading container
       - name: Execute Cloud Run Job
         run: |
           gcloud beta run jobs execute load-data-job --region=us --quiet
