@@ -3,7 +3,7 @@ name: Build and Deploy Load Data via Vertex AI
 on:
   push:
     paths:
-      - 'docker/Dockerfile'
+      - 'docker/load_data'
       - 'code/**'
       - '.github/workflows/load_data.yml'
 
@@ -38,7 +38,7 @@ jobs:
           docker build --build-arg KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }} \
                        --build-arg KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
                        -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
-                       -f docker/Dockerfile .
+                       -f docker/load_data .
 
       # 6️⃣ Push Docker Image to Artifact Registry
       - name: Push Docker Image
