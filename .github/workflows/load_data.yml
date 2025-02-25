@@ -1,59 +1,59 @@
-name: Build and Deploy Load Data via Cloud Run Job
+name: Build and Deploy Load Data via Vertex AI
 
 on:
   push:
     paths:
-      - 'docker/load_data'
+      - 'docker/Dockerfile'
       - 'code/**'
       - '.github/workflows/load_data.yml'
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Check out your repository code
+      # 1️⃣ Checkout the repository code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2. Authenticate to Google Cloud using your service account key
+      # 2️⃣ Authenticate to Google Cloud
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # 3. Set up the Cloud SDK using your project ID
+      # 3️⃣ Set up Cloud SDK
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 4. Configure Docker to authenticate with Artifact Registry
+      # 4️⃣ Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
-      # 5. Build your Docker image using your custom Dockerfile
+      # 5️⃣ Build the Docker image with Kaggle credentials
       - name: Build Docker Image
         run: |
-          docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
+          docker build --build-arg KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }} \
+                       --build-arg KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
+                       -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
+                       -f docker/Dockerfile .
 
-      # 6. Push the Docker image to Artifact Registry
+      # 6️⃣ Push Docker Image to Artifact Registry
       - name: Push Docker Image
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7. Install beta components non-interactively
-      - name: Install Beta Components
-        run: gcloud components install beta --quiet
-
-      # 8. Create a Cloud Run Job using the pushed image in a valid region (e.g., us-central1)
-      - name: Create Cloud Run Job
+      # 7️⃣ Submit Vertex AI Custom Job to run the script
+      - name: Submit Vertex AI Custom Job
         run: |
-          gcloud beta run jobs create load-data-job \
-            --image=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
+          gcloud ai custom-jobs create \
             --region=us-central1 \
-            --quiet
+            --display-name=load-data-job \
+            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 9. Execute the Cloud Run Job to run your data-loading container in the same region
-      - name: Execute Cloud Run Job
+      # 8️⃣ Cleanup (Optional): Remove older images if needed
+      - name: Cleanup Old Docker Images (Optional)
         run: |
-          gcloud beta run jobs execute load-data-job --region=us-central1 --quiet
+          gcloud artifacts docker images delete us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true

@@ -1,56 +1,42 @@
-name: Build and Deploy Load Data via Vertex AI
+# Base image with Python
+FROM python:3.9-slim
 
-on:
-  push:
-    paths:
-      - 'docker/load_data'
-      - 'code/**'
-      - '.github/workflows/load_data.yml'
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-jobs:
-  build_and_deploy:
-    runs-on: ubuntu-latest
+# Install Google Cloud SDK
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
+    | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+    | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
+    apt-get update && apt-get install -y google-cloud-sdk
 
-    steps:
-      # 1️⃣ Checkout the repository code
-      - name: Checkout Code
-        uses: actions/checkout@v3
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-      # 2️⃣ Authenticate to Google Cloud
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+# Set working directory
+WORKDIR /app
 
-      # 3️⃣ Set up Cloud SDK
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+# Copy source code
+COPY code/ /app/
 
-      # 4️⃣ Configure Docker for Artifact Registry
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+# Set Kaggle API Credentials via build arguments
+ARG KAGGLE_USERNAME
+ARG KAGGLE_KEY
 
-      # 5️⃣ Build the Docker image
-      - name: Build Docker Image
-        run: |
-          docker build -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest -f docker/load_data .
+# Create Kaggle configuration
+RUN mkdir -p ~/.kaggle && \
+    echo "{\"username\":\"${KAGGLE_USERNAME}\",\"key\":\"${KAGGLE_KEY}\"}" > ~/.kaggle/kaggle.json && \
+    chmod 600 ~/.kaggle/kaggle.json
 
-      # 6️⃣ Push Docker Image to Artifact Registry
-      - name: Push Docker Image
-        run: |
-          docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+# Set environment variables for GCP authentication
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
 
-      # 7️⃣ Submit Vertex AI Custom Job to run the script
-      - name: Submit Vertex AI Custom Job
-        run: |
-          gcloud ai custom-jobs create \
-            --region=us-central1 \
-            --display-name=load-data-job \
-            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
-
-      # 8️⃣ Cleanup (Optional): Remove older images if needed
-      - name: Cleanup Old Docker Images (Optional)
-        run: |
-          gcloud artifacts docker images delete us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
+# Default command to run the data loader
+CMD ["python", "load_data.py"]
