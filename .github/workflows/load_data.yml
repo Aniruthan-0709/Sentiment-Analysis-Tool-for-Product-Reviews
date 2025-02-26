@@ -16,42 +16,60 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2️⃣ Authenticate to Google Cloud
+      # 2️⃣ Cache Docker layers to speed up builds
+      - name: Cache Docker Layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # 3️⃣ Authenticate to Google Cloud
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # 3️⃣ Set up Cloud SDK
+      # 4️⃣ Set up Cloud SDK
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 4️⃣ Configure Docker for Artifact Registry (us-central1 region)
+      # 5️⃣ Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      # 5️⃣ Build the Docker image with Kaggle credentials
-      - name: Build Docker Image
-        run: | 
+      # 6️⃣ Build Docker Image using BuildKit and Caching
+      - name: Build Docker Image with BuildKit
+        run: |
+          export DOCKER_BUILDKIT=1
           docker build --build-arg KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }} \
                        --build-arg KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
+                       --cache-from=type=local,src=/tmp/.buildx-cache \
+                       --cache-to=type=local,dest=/tmp/.buildx-cache-new \
                        -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
                        -f docker/load_data .
 
-      # 6️⃣ Push Docker Image to Artifact Registry with Error Handling
+      # 7️⃣ Update Cache After Build
+      - name: Update Docker Cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      # 8️⃣ Push Docker Image to Artifact Registry with Optimized Upload
       - name: Push Docker Image
         run: |
-          set -e  # Exit immediately if any command fails
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+          docker push --max-concurrent-uploads=3 us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7️⃣ Verify Docker Image Exists in Artifact Registry
+      # 9️⃣ Verify Docker Image Exists in Artifact Registry
       - name: Verify Docker Image in Artifact Registry
         run: |
-          gcloud artifacts docker images list us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo
+          gcloud artifacts docker images list us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo --quiet
 
-      # 8️⃣ Submit Vertex AI Custom Job with Correct Image Path
+      # 🔟 Submit Vertex AI Custom Job
       - name: Submit Vertex AI Custom Job
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
@@ -61,7 +79,12 @@ jobs:
             --display-name=load-data-job \
             --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 9️⃣ Cleanup Old Docker Images (Optional)
+      # 1️⃣1️⃣ Verify Job Status in Vertex AI
+      - name: Verify Vertex AI Job Status
+        run: |
+          gcloud ai custom-jobs list --region=us-central1 --filter="displayName=load-data-job"
+
+      # 1️⃣2️⃣ Cleanup Old Docker Images (Optional)
       - name: Cleanup Old Docker Images
         run: |
           gcloud artifacts docker images delete us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
