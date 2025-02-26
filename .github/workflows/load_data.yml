@@ -20,7 +20,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # 3️⃣ Cache Docker layers to speed up builds
+      # 3️⃣ Cache Docker Layers
       - name: Cache Docker Layers
         uses: actions/cache@v3
         with:
@@ -41,12 +41,22 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 6️⃣ Configure Docker for Artifact Registry
+      # 6️⃣ Cancel All Previous AI Jobs
+      - name: Cancel All Previous Vertex AI Jobs
+        run: |
+          for REGION in $(gcloud ai locations list --format="value(locationId)")
+          do
+            echo "Checking jobs in region: $REGION"
+            gcloud ai custom-jobs list --region=$REGION --filter="state=JOB_STATE_RUNNING OR state=JOB_STATE_PENDING" --format="value(name)" | \
+            xargs -I {} gcloud ai custom-jobs cancel {} --region=$REGION --quiet
+          done
+
+      # 7️⃣ Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      # 7️⃣ Build Docker Image using Buildx and Caching
+      # 8️⃣ Build Docker Image with Buildx
       - name: Build Docker Image with Buildx
         run: |
           docker buildx build --build-arg KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }} \
@@ -57,18 +67,18 @@ jobs:
                               -f docker/load_data . \
                               --push
 
-      # 8️⃣ Update Docker Cache
+      # 9️⃣ Update Docker Cache
       - name: Update Docker Cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      # 9️⃣ Verify Docker Image in Artifact Registry
+      # 🔟 Verify Docker Image in Artifact Registry
       - name: Verify Docker Image in Artifact Registry
         run: |
           gcloud artifacts docker images list us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo --quiet
 
-      # 🔟 Submit Vertex AI Custom Job
+      # 1️⃣1️⃣ Submit Vertex AI Custom Job (Optimized for 30GB Data)
       - name: Submit Vertex AI Custom Job
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
@@ -76,14 +86,14 @@ jobs:
           gcloud ai custom-jobs create \
             --region=us-central1 \
             --display-name=load-data-job \
-            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+            --worker-pool-spec=machine-type=n1-standard-8,replica-count=1,container-image-uri=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest,disk-type=pd-ssd,disk-size=200GB,scheduling.preemptible=true
 
-      # 1️⃣1️⃣ Verify Vertex AI Job Status
+      # 1️⃣2️⃣ Verify Vertex AI Job Status
       - name: Verify Vertex AI Job Status
         run: |
           gcloud ai custom-jobs list --region=us-central1 --filter="displayName=load-data-job"
 
-      # 1️⃣2️⃣ Cleanup Old Docker Images (Optional)
+      # 1️⃣3️⃣ Cleanup Old Docker Images (Optional)
       - name: Cleanup Old Docker Images
         run: |
           gcloud artifacts docker images delete us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
