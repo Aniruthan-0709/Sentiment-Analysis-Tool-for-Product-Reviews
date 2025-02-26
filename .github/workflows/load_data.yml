@@ -28,24 +28,24 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 4️⃣ Configure Docker for Artifact Registry (multi-region compatible)
+      # 4️⃣ Configure Docker for Artifact Registry (us-central1 region)
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       # 5️⃣ Build the Docker image with Kaggle credentials
       - name: Build Docker Image
         run: | 
           docker build --build-arg KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }} \
                        --build-arg KAGGLE_KEY=${{ secrets.KAGGLE_KEY }} \
-                       -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
+                       -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
                        -f docker/load_data .
 
-      # 6️⃣ Push Docker Image to Artifact Registry (multi-region)
+      # 6️⃣ Push Docker Image to Artifact Registry (us-central1)
       - name: Push Docker Image
         run: |
-          docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7️⃣ Submit Vertex AI Custom Job to run the script (compatible with multi-region)
+      # 7️⃣ Submit Vertex AI Custom Job to run the script
       - name: Submit Vertex AI Custom Job
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
@@ -53,9 +53,9 @@ jobs:
           gcloud ai custom-jobs create \
             --region=us-central1 \
             --display-name=load-data-job \
-            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
+            --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
       # 8️⃣ Cleanup (Optional): Remove older images if needed
       - name: Cleanup Old Docker Images (Optional)
         run: |
-          gcloud artifacts docker images delete us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
+          gcloud artifacts docker images delete us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
