@@ -45,7 +45,12 @@ jobs:
         run: |
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7️⃣ Submit Vertex AI Custom Job to run the script
+      # 7️⃣ Verify Docker Image Exists (Optional Step)
+      - name: Verify Docker Image in Artifact Registry
+        run: |
+          gcloud artifacts docker images list us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo
+
+      # 8️⃣ Submit Vertex AI Custom Job to run the script
       - name: Submit Vertex AI Custom Job
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
@@ -55,7 +60,7 @@ jobs:
             --display-name=load-data-job \
             --worker-pool-spec=machine-type=n1-standard-4,replica-count=1,container-image-uri=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 8️⃣ Cleanup (Optional): Remove older images if needed
+      # 9️⃣ Cleanup (Optional): Remove older images if needed
       - name: Cleanup Old Docker Images (Optional)
         run: |
           gcloud artifacts docker images delete us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest --quiet || true
