@@ -28,7 +28,7 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 4️⃣ Configure Docker for Artifact Registry
+      # 4️⃣ Configure Docker for Artifact Registry (multi-region compatible)
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
@@ -40,12 +40,12 @@ jobs:
                        -t us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest \
                        -f docker/load_data .
 
-      # 6️⃣ Push Docker Image to Artifact Registry
+      # 6️⃣ Push Docker Image to Artifact Registry (multi-region)
       - name: Push Docker Image
         run: |
           docker push us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/docker-repo/load_data:latest
 
-      # 7️⃣ Submit Vertex AI Custom Job to run the script
+      # 7️⃣ Submit Vertex AI Custom Job to run the script (compatible with multi-region)
       - name: Submit Vertex AI Custom Job
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
