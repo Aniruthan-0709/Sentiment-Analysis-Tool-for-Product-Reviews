@@ -1,0 +1,8 @@
+2025-03-13 18:36:21,258 - INFO - Loading the Datset from the local
+2025-03-13 18:36:21,306 - INFO - Converting the star rating to the sentiment values
+2025-03-13 18:36:21,309 - INFO - Balancing the dataset started
+2025-03-13 18:36:21,315 - INFO - Datset has been balanced
+2025-03-13 18:36:21,315 - INFO - Preparing X and Y for the model training
+2025-03-13 18:36:21,316 - INFO - Final dataset size: 14145 samples
+2025-03-13 18:36:21,317 - INFO - Training samples: 11316, Validation samples: 2829
+2025-03-13 18:36:21,429 - INFO - Tokenization and DataLoader setup completed.
