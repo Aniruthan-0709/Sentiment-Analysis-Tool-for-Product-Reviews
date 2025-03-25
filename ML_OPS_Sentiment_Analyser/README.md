@@ -1,6 +1,6 @@
 # Amazon Customer Sentiment Analysis
 
-## IE 7374: Model Pipeline Assignment  
+## IE 7374: Model Pipeline
 **Group Number: 7**  
 
 ### Team Members:  
