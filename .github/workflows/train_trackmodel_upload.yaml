@@ -3,9 +3,9 @@ name: Train, Track with MLflow, and Upload Sentiment Model
 on:
   push:
     branches:
-      - main  # Runs workflow when pushing to the main branch
+      - main
   schedule:
-    - cron: "0 0 * * 1"  # Runs every Monday at midnight UTC
+    - cron: "0 0 * * 1"
 
 jobs:
   train-and-upload:
@@ -28,22 +28,21 @@ jobs:
         GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
       run: |
         echo "$GCP_CREDENTIALS" > gcp-key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=gcp-key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
         gcloud auth activate-service-account --key-file=gcp-key.json
-        gcloud auth list  # Verify authentication
+        echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
+
+    - name: Create directories
+      run: |
+        mkdir -p Data
+        mkdir -p models
+        mkdir -p artifacts
 
     - name: Download Data from GCP
       run: python Data_fetch.py
 
-    - name: Set Up MLflow Tracking
-      run: |
-        export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
-        mlflow server --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5000 &
-
     - name: Train the Model and Log with MLflow
-      env:
-        MLFLOW_TRACKING_URI: http://127.0.0.1:5000
-      run: python Model_training.py  # Runs your training script
+      run: python Model_training.py
 
     - name: Hyperparameter Tuning
       run: python hyperparameter_tuning.py
@@ -64,9 +63,7 @@ jobs:
       run: python experiment_tracking.py
 
     - name: Upload Model to GCP
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: gcp-key.json
-      run: python Model_to_cloud.py  # Uploads model to GCS
+      run: python Model_to_cloud.py
 
     - name: Upload Model as an Artifact
       uses: actions/upload-artifact@v4
