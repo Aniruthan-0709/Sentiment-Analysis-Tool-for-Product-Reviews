@@ -1,0 +1,5 @@
+2025-03-13 18:03:27,949 - INFO - Loading the Datset from the local
+2025-03-13 18:03:28,002 - INFO - Converting the star rating to the sentiment values
+2025-03-13 18:03:28,005 - INFO - Balancing the dataset started
+2025-03-13 18:03:28,011 - INFO - Datset has been balanced
+2025-03-13 18:03:28,011 - INFO - Preparing X and Y for the model training
