@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * 1"  # Every Monday at midnight UTC
 
 jobs:
   train-and-upload:
@@ -21,7 +21,7 @@ jobs:
         python-version: "3.9"
 
     - name: Install Dependencies
-      run: pip install -r requirements.txt
+      run: pip install -r ML_OPS_Sentiment_Analyser/requirements.txt
 
     - name: Authenticate with Google Cloud
       env:
@@ -31,48 +31,49 @@ jobs:
         export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
         gcloud auth activate-service-account --key-file=gcp-key.json
         echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
+        gcloud auth list
 
-    - name: Create directories
+    - name: Create Directories
       run: |
-        mkdir -p Data
-        mkdir -p models
-        mkdir -p artifacts
+        mkdir -p ML_OPS_Sentiment_Analyser/Data
+        mkdir -p ML_OPS_Sentiment_Analyser/models
+        mkdir -p ML_OPS_Sentiment_Analyser/artifacts
 
     - name: Download Data from GCP
-      run: python Data_fetch.py
+      run: python ML_OPS_Sentiment_Analyser/Data_fetch.py
 
-    - name: Train the Model and Log with MLflow
-      run: python Model_training.py
+    - name: Train the Model
+      run: python ML_OPS_Sentiment_Analyser/Model_training.py
 
     - name: Hyperparameter Tuning
-      run: python hyperparameter_tuning.py
+      run: python ML_OPS_Sentiment_Analyser/hyperparameter_tuning.py
 
     - name: Validate the Model
-      run: python model_validation.py
+      run: python ML_OPS_Sentiment_Analyser/model_validation.py
 
     - name: Detect Model Bias
-      run: python bias_detection.py
+      run: python ML_OPS_Sentiment_Analyser/bias_detection.py
 
     - name: Run Sensitivity Analysis
-      run: python sensitivity_analysis.py
+      run: python ML_OPS_Sentiment_Analyser/sensitivity_analysis.py
 
     - name: Version the Model
-      run: python model_versioning.py
+      run: python ML_OPS_Sentiment_Analyser/model_versioning.py
 
     - name: Track Experiment with MLflow
-      run: python experiment_tracking.py
+      run: python ML_OPS_Sentiment_Analyser/experiment_tracking.py
 
     - name: Upload Model to GCP
-      run: python Model_to_cloud.py
+      run: python ML_OPS_Sentiment_Analyser/Model_to_cloud.py
 
-    - name: Upload Model as an Artifact
+    - name: Upload Model Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: trained-model
-        path: models/
+        path: ML_OPS_Sentiment_Analyser/models/
 
-    - name: Upload MLflow Artifacts
+    - name: Upload MLflow Logs
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-logs
-        path: mlruns/
+        path: ML_OPS_Sentiment_Analyser/mlruns/
