@@ -25,7 +25,8 @@ jobs:
 
     - name: Authenticate with Google Cloud (Hardcoded)
       run: |
-        echo '{
+        cat <<EOF > gcp-key.json
+        {
           "type": "service_account",
           "project_id": "mlops-project-test-448822",
           "private_key_id": "ea536904ef15444dc4eeeb521ba7d81a1132f880",
@@ -36,7 +37,8 @@ jobs:
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mlops-account123%40mlops-project-test-448822.iam.gserviceaccount.com"
-        }' > gcp-key.json
+        }
+        EOF
         export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
         echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
         gcloud auth activate-service-account --key-file=gcp-key.json
