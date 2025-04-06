@@ -23,25 +23,14 @@ jobs:
     - name: Install Dependencies
       run: pip install -r ML_OPS_Sentiment_Analyser/requirements.txt
 
-    - name: Authenticate with Google Cloud (Hardcoded)
+    - name: Authenticate with Google Cloud
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
       run: |
-        cat <<EOF > gcp-key.json
-        {
-          "type": "service_account",
-          "project_id": "mlops-project-test-448822",
-          "private_key_id": "ea536904ef15444dc4eeeb521ba7d81a1132f880",
-          "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDATX6ubHZJNzfN\\nfjKnEzcjQZy0FgnWNL7l+Q9UBMOdxY3bQZE0U1frzT9lYXR+8/i3y0zr/fQgv9Kg\\nk6qSDZCSYrYaaXX7ULGDaZB37cIMCNDOYloL9OZT9slqMFtDujD7m0gMB6pLufOV\\njfxtWeFhq5Qqme4RtV5Vu9xgy3+WDMa77zrOfDAVq21VA+Kb8ktIvpYHTwnROWuV\\nK+MyzjsgO/YOsIAsL8EkUAQpyBuGSfRFnHfCMQMeFhypj+AveA+nGwbbBCmuqwOq\\nbHBTRBxJWn2rEmdFfHXqXVna15KU7n2fBAvTLA0cH7DjFsRhasKaSiQ0qbg1Cg44\\no9kyZiShAgMBAAECggEAAMoNb5IAKMBFDPrQZtc/Km/2QJsIngCApvGvIWeh7yvb\\nDU/XMoLmDxkeTxN/K+QFJ3Y6Xa2pTgf42nzEZrzCSDHtfT6P7oULv97HEIjQKkIu\\nARU/OTMsRStzv/G9w8B7GVpVr+qNiam6q1NJcez8Os9gllH5hDfsZfqmdZaC5dQr\\n8NN0Zdk9Uq7Y1UGXnRndBmRnBOXLdZd45MIlZAH3UJhaOP29qP7slYvXETnM4Bsl\\nIqkM9Wwe/WySSglXWENkbzSt2oO5bNKDfdDzqPBt7aP6euOA8QoNTFi007+vKEke\\noth6bVeTTZHXN5COG68rVBjUu3rCEGKgaDPhEySB8QKBgQDgDi0DjRTK5zsEDAWq\\nT1N5cgbe+V0M3dxCqusWGpmdpyzvlIqV5BDvv2VDpwwh8CBkJ+hYxh2rHoBn5r+u\\nkbOEjJdWefKTlv6r9pQ2A23UQHRLMkO5lEj96daMja9VHgJSo/TYUv6QFPDCvZc7\\n/xfNs7RtUrW5AUAW2sO7gdxGuQKBgQDbuF/1ZHy5qGqPCLoi5EjqwMEQHuOD3xwL\\nLQ8GyCSCasxKwQ4e4KqNHqf1kgpZUyQVMdiWAjOowebYLHlhyRmE93pSRliYaVu/\\n33TLZWdnZCXlYZWwRMHkNybQKuZf2cwvVAhb2cPVv//xdOIcRwfmg5yOBwg+Qsmj\\n95feiYzZKQKBgC6S48qELhlLXZomwZq4aJqrGECLR0tgZuO40atDlkEOOioHD5O+\\n18JuX6djdwMq/iCzpvmlHQ+wBHMUpS2tfcqEywSfzsvdLE0ksYRUzCS9zS7AYRGX\\ngGC/leibnyGrXkI9cKzy+5WJtM5WSLSg/xq0S0IaWkn9t4vIp703bkmJAoGAPdbF\\ngx42EFa7LuiI4rsXXqLDc5MN+5Z2oRqcaQ85X09JkhyFqeEXf0JKiU4CBaPluuVd\\njNKv0WZJXzwdKY1c1lSEo9VSqAq3HOh6SaiPksTX+Zgedg7T9zQig2IfloiI9CUV\\neSxv9p/kHAQGg2jma1VNYZfPFR7c+336y1IxRwkCgYEAoTRMrkyR6OwR5UsexUBT\\nlMQfGr8nMGEdgBXbxX0sSqPcLiailtlNXL4Cx5FZk9h6WU8TDPRKTnfwk29pJCjr\\nrEljsbOpShYs1RnJFydFphKwFpe3ct//k5ug+yAPjtDqGkkYTl6mmlGHFi0wi8tP\\nVzoJ1y8PAHpuHMvJf3Y/8aY=\\n-----END PRIVATE KEY-----\\n",,
-          "client_email": "mlops-account123@mlops-project-test-448822.iam.gserviceaccount.com",
-          "client_id": "113249023470291424916",
-          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-          "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mlops-account123%40mlops-project-test-448822.iam.gserviceaccount.com"
-        }
-        EOF
+        echo "$GCP_CREDENTIALS" > gcp-key.json
         export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
-        echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
         gcloud auth activate-service-account --key-file=gcp-key.json
+        echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
         gcloud auth list
 
     - name: Create Directories
