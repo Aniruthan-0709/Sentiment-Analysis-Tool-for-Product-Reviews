@@ -1,9 +1,9 @@
-name: Train, Track with MLflow, and Upload Sentiment Model
+name: Model Development Pipeline
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-model-pipeline]
   schedule:
     - cron: "0 0 * * 1"  # Every Monday at midnight UTC
 
@@ -41,6 +41,9 @@ jobs:
         mkdir -p Model_Pipeline/mlruns
 
     - name: Download Data from GCP
+      env:
+        GCP_BUCKET: ${{ secrets.GCP_BUCKET }}
+        GCP_PROCESSED_BLOB: ${{ secrets.GCP_PROCESSED_BLOB }}
       run: python Model_Pipeline/Data_fetch.py
 
     - name: Train the Model

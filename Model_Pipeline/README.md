@@ -95,4 +95,3 @@ LOCAL_FILE_NAME = "Data.csv"
 
 def download_from_gcp(bucket_name, source_blob_name, destination_file_name):
     # Function to download data from GCP
-
