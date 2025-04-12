@@ -21,7 +21,7 @@ jobs:
         python-version: "3.9"
 
     - name: Install Dependencies
-      run: pip install -r Model_Pipeline/requirements.txt
+      run: pip install -r ML_OPS_Sentiment_Analyser/requirements.txt
 
     - name: Authenticate with Google Cloud
       env:
@@ -35,49 +35,58 @@ jobs:
 
     - name: Create Directories
       run: |
-        mkdir -p Model_Pipeline/Data
-        mkdir -p Model_Pipeline/models
-        mkdir -p Model_Pipeline/artifacts
-        mkdir -p Model_Pipeline/mlruns
+        mkdir -p ML_OPS_Sentiment_Analyser/Data
+        mkdir -p ML_OPS_Sentiment_Analyser/models
+        mkdir -p ML_OPS_Sentiment_Analyser/artifacts
+        mkdir -p ML_OPS_Sentiment_Analyser/mlruns
 
     - name: Download Data from GCP
       env:
         GCP_BUCKET: ${{ secrets.GCP_BUCKET }}
         GCP_PROCESSED_BLOB: ${{ secrets.GCP_PROCESSED_BLOB }}
-      run: python Model_Pipeline/Data_fetch.py
+      run: python ML_OPS_Sentiment_Analyser/Data_fetch.py
 
     - name: Train the Model
-      run: python Model_Pipeline/Model_training.py
+      run: python ML_OPS_Sentiment_Analyser/Model_training.py
 
     - name: Hyperparameter Tuning
-      run: python Model_Pipeline/hyperparameter_tuning.py
+      run: python ML_OPS_Sentiment_Analyser/hyperparameter_tuning.py
 
     - name: Validate the Model
-      run: python Model_Pipeline/model_validation.py
+      run: python ML_OPS_Sentiment_Analyser/model_validation.py
 
     - name: Detect Model Bias
-      run: python Model_Pipeline/bias_detection.py
+      run: python ML_OPS_Sentiment_Analyser/bias_detection.py
 
     - name: Run Sensitivity Analysis
-      run: python Model_Pipeline/sensitivity_analysis.py
+      run: python ML_OPS_Sentiment_Analyser/sensitivity_analysis.py
 
     - name: Version the Model
-      run: python Model_Pipeline/model_versioning.py
+      run: python ML_OPS_Sentiment_Analyser/model_versioning.py
 
     - name: Track Experiment with MLflow (GCP Artifact Storage)
-      run: python Model_Pipeline/experiment_tracking.py
+      run: python ML_OPS_Sentiment_Analyser/experiment_tracking.py
 
     - name: Upload Trained Model to GCP
-      run: python Model_Pipeline/Model_to_cloud.py
+      run: python ML_OPS_Sentiment_Analyser/Model_to_cloud.py
 
     - name: Upload Trained Model Files
       uses: actions/upload-artifact@v4
       with:
         name: trained-model
-        path: Model_Pipeline/models/
+        path: ML_OPS_Sentiment_Analyser/models/
 
     - name: Upload MLflow Logs (Local Run Metadata)
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-logs
-        path: Model_Pipeline/mlruns/
+        path: ML_OPS_Sentiment_Analyser/mlruns/
+
+    - name: 📧 Send Success Email via Gmail SMTP
+      env:
+        SMTP_SENDER: ${{ secrets.SMTP_SENDER }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        SMTP_RECEIVER: ${{ secrets.SMTP_RECEIVER }}
+      run: python ML_OPS_Sentiment_Analyser/send_email.py
+
+

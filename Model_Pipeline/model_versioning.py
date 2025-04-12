@@ -15,7 +15,7 @@ logging.info("Starting Model Versioning...")
 # ====================== GCP CONFIG ======================
 BUCKET_NAME = "mlops_dataset123"
 GCS_MODEL_FOLDER = "models/"
-LOCAL_MODEL_PATH = "ML_OPS_Sentiment_Analyser/models/naive_bayes_sentiment.pkl"
+LOCAL_MODEL_PATH = "models/sentiment_analyzer_model.pkl"
 
 # ====================== GCS Setup ======================
 client = storage.Client()
@@ -25,7 +25,7 @@ bucket = client.bucket(BUCKET_NAME)
 blobs = list(bucket.list_blobs(prefix=GCS_MODEL_FOLDER))
 
 # Extract version numbers from filenames
-version_pattern = re.compile(r"naive_bayes_sentiment_v(\d+)\.pkl")
+version_pattern = re.compile(r"sentiment_analyzer_model_v(\d+)\.pkl")
 existing_versions = []
 
 for blob in blobs:
@@ -38,7 +38,7 @@ current_version = max(existing_versions) if existing_versions else 0
 new_version = current_version + 1
 
 # Create new versioned filename
-versioned_filename = f"naive_bayes_sentiment_v{new_version}.pkl"
+versioned_filename = f"sentiment_analyzer_model_v{new_version}.pkl"
 versioned_local_path = os.path.join("ML_OPS_Sentiment_Analyser", "models", versioned_filename)
 
 # Copy the base model to the versioned file
